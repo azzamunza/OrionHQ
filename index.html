@@ -32,84 +32,60 @@
           <a class="wordmark" href="#/"><span class="brand-mark small">✦</span> ORION<span class="accent">HQ</span></a>
           <button id="sidebar-close" class="icon-button mobile-only" type="button" aria-label="Close menu">×</button>
         </div>
-
         <nav id="nav-list" class="nav-list" aria-label="Main navigation"></nav>
-
         <div class="sidebar-foot">
           <button id="pin-button" class="nav-action" type="button"><span>◈</span> Pin sidebar</button>
           <button id="developer-button" class="nav-action admin-only" type="button" hidden><span>⌘</span> Developer mode</button>
         </div>
       </aside>
-
       <div id="scrim" class="scrim"></div>
-
       <section class="workspace">
         <header class="topbar glass-panel">
           <button id="menu-button" class="icon-button mobile-only" type="button" aria-label="Open menu">☰</button>
-
-          <div class="breadcrumbs">
-            <span>ORIONHQ</span>
-            <span>/</span>
-            <strong id="breadcrumb-current">Dashboard</strong>
-          </div>
-
+          <div class="breadcrumbs"><span>ORIONHQ</span><span>/</span><strong id="breadcrumb-current">Dashboard</strong></div>
           <div class="top-actions">
             <button id="theme-button" class="icon-button" type="button" aria-label="Toggle theme">◐</button>
             <div class="profile-wrap">
-              <button id="profile-button" class="profile-button" type="button">
-                <span id="user-avatar">A</span>
-                <span id="profile-name">User</span>
-                <span>⌄</span>
-              </button>
-              <div id="profile-menu" class="profile-menu" hidden>
-                <button id="logout-button" type="button">Sign out</button>
-              </div>
+              <button id="profile-button" class="profile-button" type="button"><span id="user-avatar">A</span><span id="profile-name">User</span><span>⌄</span></button>
+              <div id="profile-menu" class="profile-menu" hidden><button id="logout-button" type="button">Sign out</button></div>
             </div>
           </div>
         </header>
-
         <main id="page-content" class="page-content"></main>
       </section>
     </div>
 
     <dialog id="developer-dialog" class="developer-dialog">
-      <div class="dialog-head">
-        <div>
-          <p class="eyebrow">ADMIN CONSOLE</p>
-          <h2>Shape your orbit</h2>
-        </div>
-        <button id="dialog-close" class="icon-button" type="button" aria-label="Close">×</button>
-      </div>
-
+      <div class="dialog-head"><div><p class="eyebrow">ADMIN CONSOLE</p><h2>Shape your orbit</h2></div><button id="dialog-close" class="icon-button" type="button" aria-label="Close">×</button></div>
       <p class="dialog-copy">Create a custom page that will appear in the OrionHQ navigation.</p>
-
       <form id="page-form">
-        <label>
-          Page name
-          <input name="title" type="text" required placeholder="e.g. Reading list" />
-        </label>
-        <label>
-          Icon
-          <input name="icon" type="text" maxlength="2" value="✦" />
-        </label>
-        <label>
-          Route slug
-          <input name="slug" type="text" required placeholder="reading-list" pattern="[a-z0-9-]+" />
-        </label>
-        <label>
-          Type
-          <select name="kind">
-            <option value="link">Dashboard page</option>
-            <option value="income">Income engine workspace</option>
-          </select>
-        </label>
+        <label>Page name<input name="title" type="text" required placeholder="e.g. Reading list" /></label>
+        <label>Icon<input name="icon" type="text" maxlength="2" value="✦" /></label>
+        <label>Route slug<input name="slug" type="text" required placeholder="reading-list" pattern="[a-z0-9-]+" /></label>
+        <label>Type<select name="kind"><option value="link">Dashboard page</option><option value="income">Income engine workspace</option></select></label>
         <button class="primary-button" type="submit">Add page</button>
       </form>
-
       <div id="custom-pages" class="custom-pages"></div>
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+      // Supabase rejects stale implicit-flow hashes, but the rejected token remains
+      // in the address bar. Remove only expired/stale OAuth callbacks before the
+      // Supabase client is created; fresh callbacks are left for Supabase to parse.
+      (() => {
+        const hash = window.location.hash;
+        if (!hash.includes('access_token=')) return;
+        const params = new URLSearchParams(hash.slice(1));
+        const now = Math.floor(Date.now() / 1000);
+        const issuedAt = Number(params.get('iat'));
+        const expiresAt = Number(params.get('expires_at'));
+        const stale = (expiresAt > 0 && now >= expiresAt) || (issuedAt > 0 && now - issuedAt > 120);
+        if (stale) {
+          window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+        }
+      })();
+    </script>
     <script src="app.js"></script>
   </body>
 </html>
