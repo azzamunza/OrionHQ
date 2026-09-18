@@ -38,7 +38,6 @@
         <main id="page-content" class="page-content"></main>
       </section>
     </div>
-
     <dialog id="developer-dialog" class="developer-dialog"><div class="dialog-head"><div><p class="eyebrow">ADMIN CONSOLE</p><h2>Shape your orbit</h2></div><button id="dialog-close" class="icon-button" type="button" aria-label="Close">×</button></div><p class="dialog-copy">Create a custom page that will appear in the OrionHQ navigation.</p><form id="page-form"><label>Page name<input name="title" type="text" required placeholder="e.g. Reading list" /></label><label>Icon<input name="icon" type="text" maxlength="2" value="✦" /></label><label>Route slug<input name="slug" type="text" required placeholder="reading-list" pattern="[a-z0-9-]+" /></label><label>Type<select name="kind"><option value="link">Dashboard page</option><option value="income">Income engine workspace</option></select></label><button class="primary-button" type="submit">Add page</button></form><div id="custom-pages" class="custom-pages"></div></dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
