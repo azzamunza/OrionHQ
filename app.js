@@ -3,8 +3,11 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const ADMIN_EMAIL = 'azzamunza@gmail.com';
 // Supabase detects OAuth callbacks (PKCE `?code=` and implicit `#access_token=`)
 // itself; getSession() in initApp() waits for that exchange before auth routing.
+const authFlowType = new URLSearchParams(window.location.hash.slice(1)).has('access_token')
+  ? 'implicit'
+  : 'pkce';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: { detectSessionInUrl: true, flowType: 'pkce' }
+  auth: { detectSessionInUrl: true, flowType: authFlowType }
 });
 const state = {
   session: null,
