@@ -1,7 +1,11 @@
 const SUPABASE_URL = 'https://nrwckhyegdkcbfbiitxz.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5yd2NraHllZ2RrY2JmYmlpdHh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxMzYxMzcsImV4cCI6MjA4NzcxMjEzN30.j_4uC5H9Q2VXnHkDUDt5v8m61A6nMrrbTbs3vHwL9H4';
 const ADMIN_EMAIL = 'azzamunza@gmail.com';
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Supabase detects OAuth callbacks (PKCE `?code=` and implicit `#access_token=`)
+// itself; getSession() in initApp() waits for that exchange before auth routing.
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { detectSessionInUrl: true, flowType: 'pkce' }
+});
 const state = {
   session: null,
   pages: [],
