@@ -120,5 +120,6 @@ body[data-theme="light"] {
 }
 body[data-theme="light"] .sidebar { background: rgba(255,255,255,.78); }
 body[data-theme="light"] .card { background: linear-gradient(160deg,rgba(255,255,255,.94),rgba(245,249,252,.94)); }
+body[data-theme="light"] .developer-dialog { background: var(--panel-strong); }
 body[data-theme="light"] .primary-button, body[data-theme="light"] #user-avatar { color: #fff; }
 body[data-theme="light"] #page-form input, body[data-theme="light"] #page-form select { background: #fff; color: var(--ink); }
