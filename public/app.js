@@ -1,14 +1,13 @@
-const SUPABASE_URL = 'https://nrwckhyegdkcbfbiitxz.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5yd2NraHllZ2RrY2JmYmlpdHh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxMzYxMzcsImV4cCI6MjA4NzcxMjEzN30.j_4uC5H9Q2VXnHkDUDt5v8m61A6nMrrbTbs3vHwL9H4';
-const ADMIN_EMAIL = 'azzamunza@gmail.com';
-// Supabase detects OAuth callbacks (PKCE `?code=` and implicit `#access_token=`)
-// itself; getSession() in initApp() waits for that exchange before auth routing.
-const authFlowType = new URLSearchParams(window.location.hash.slice(1)).has('access_token')
-  ? 'implicit'
-  : 'pkce';
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: { detectSessionInUrl: true, flowType: authFlowType }
-});
+async function api(path, options = {}) {
+  const res = await fetch(`/api${path}`, {
+    credentials: 'same-origin',
+    ...options,
+    headers: options.body ? { 'content-type': 'application/json' } : undefined
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || res.statusText);
+  return data;
+}
 const state = {
   session: null,
   pages: [],
@@ -31,7 +30,7 @@ function showView(target) {
 }
 
 function isAdmin(session) {
-  return !!session && (session.user.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  return !!session && !!session.user.isAdmin;
 }
 
 function setSidebarState() {
@@ -264,16 +263,10 @@ function renderRoute() {
 }
 
 async function loadPages() {
-  if (!supabaseClient) return;
   try {
-    const { data, error } = await supabaseClient
-      .from('"OrionHQ_pages"')
-      .select('slug, title, icon, kind')
-      .eq('is_published', true)
-      .order('sort_order', { ascending: true });
-
-    if (!error && Array.isArray(data)) {
-      state.pages = data.map((page) => ({
+    const { pages } = await api('/pages');
+    if (Array.isArray(pages)) {
+      state.pages = pages.map((page) => ({
         slug: page.slug,
         title: page.title,
         icon: page.icon || '✦',
@@ -291,14 +284,9 @@ async function loadPages() {
 async function loadSettings() {
   if (!state.session) return;
   try {
-    const { data, error } = await supabaseClient
-      .from('"OrionHQ_settings"')
-      .select('*')
-      .eq('user_id', state.session.user.id)
-      .maybeSingle();
-
-    if (!error && data) {
-      state.pinned = !!data.sidebar_pinned;
+    const { settings } = await api('/settings');
+    if (settings) {
+      state.pinned = !!settings.sidebar_pinned;
       localStorage.setItem('orionhq_sidebar_pinned', String(state.pinned));
       setSidebarState();
     }
@@ -310,39 +298,23 @@ async function loadSettings() {
 async function saveSettings() {
   if (!state.session) return;
   try {
-    await supabaseClient.from('"OrionHQ_settings"').upsert({
-      user_id: state.session.user.id,
-      sidebar_pinned: state.pinned,
-      theme: 'dark',
-      updated_at: new Date().toISOString()
-    }, { onConflict: 'user_id' });
+    await api('/settings', { method: 'PUT', body: JSON.stringify({ sidebar_pinned: state.pinned }) });
   } catch (err) {
     console.warn('Could not save OrionHQ settings', err);
   }
 }
 
-async function login() {
+function login() {
   const button = $('#login-button');
   if (!button) return;
-
   button.disabled = true;
   $('#auth-status').textContent = 'Connecting to Google…';
-
-  const { error } = await supabaseClient.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: window.location.origin + window.location.pathname
-    }
-  });
-
-  if (error) {
-    $('#auth-status').textContent = error.message;
-    button.disabled = false;
-  }
+  window.location.href = '/api/auth/login';
 }
 
 async function logout() {
-  await supabaseClient.auth.signOut();
+  await api('/auth/logout', { method: 'POST' }).catch(() => {});
+  syncUser(null);
 }
 
 function syncUser(session) {
@@ -352,8 +324,8 @@ function syncUser(session) {
     return;
   }
 
-  const email = session.user?.email || 'user';
-  const fullname = session.user?.user_metadata?.full_name || email.split('@')[0] || 'User';
+  const email = session.user.email || 'user';
+  const fullname = session.user.name || email.split('@')[0] || 'User';
   $('#profile-name').textContent = fullname;
   $('#user-avatar').textContent = (fullname || 'U').charAt(0).toUpperCase();
   $('#developer-button').hidden = !isAdmin(session);
@@ -362,31 +334,19 @@ function syncUser(session) {
   renderRoute();
 }
 
-async function handleAuthState(event, session) {
-  if (event === 'SIGNED_IN' && session) {
-    if (window.location.hash || window.location.search.includes('code')) {
-      history.replaceState({}, document.title, window.location.pathname);
-    }
-    syncUser(session);
-    await loadSettings();
-    await loadPages();
-  } else if (event === 'SIGNED_OUT') {
-    state.session = null;
-    showView('auth');
-  }
-}
-
 async function initApp() {
-  const { data: { session } } = await supabaseClient.auth.getSession();
+  let session = null;
+  try {
+    const { user } = await api('/session');
+    session = user ? { user } : null;
+  } catch (err) {
+    console.warn('Could not load session', err);
+  }
   syncUser(session);
   if (session) {
     await loadSettings();
     await loadPages();
   }
-
-  supabaseClient.auth.onAuthStateChange(async (event, session) => {
-    await handleAuthState(event, session);
-  });
 }
 
 async function addCustomPage(event) {
@@ -401,26 +361,13 @@ async function addCustomPage(event) {
 
   if (!title || !slug) return;
 
-  const row = {
-    slug: `/${slug}`,
-    title,
-    icon,
-    kind,
-    is_published: true,
-    sort_order: 999,
-    created_by: state.session.user.id,
-    created_at: new Date().toISOString()
-  };
-
   try {
-    const { error } = await supabaseClient.from('"OrionHQ_pages"').insert(row);
-    if (!error) {
-      state.pages.push({ slug: row.slug, title, icon, kind });
-      renderNav();
-      renderRoute();
-      $('#developer-dialog').close();
-      event.target.reset();
-    }
+    const { page } = await api('/pages', { method: 'POST', body: JSON.stringify({ title, icon, slug, kind }) });
+    state.pages.push(page);
+    renderNav();
+    renderRoute();
+    $('#developer-dialog').close();
+    event.target.reset();
   } catch (err) {
     console.warn('Insert custom page failed', err);
   }
