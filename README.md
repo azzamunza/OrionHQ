@@ -20,6 +20,7 @@ wrangler pages deploy public --project-name orionhq
 wrangler pages secret put GOOGLE_CLIENT_ID --project-name orionhq
 wrangler pages secret put GOOGLE_CLIENT_SECRET --project-name orionhq
 wrangler pages secret put SESSION_SECRET --project-name orionhq   # e.g. `openssl rand -hex 32`
+wrangler pages deploy public --project-name orionhq
 ```
 
 Then in the Cloudflare dashboard: Pages → orionhq → Custom domains → add `orionhq.entangledlab.work`
