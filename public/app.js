@@ -57,7 +57,7 @@ function renderNav() {
   const navItems = pages.map((page) => {
     const href = page.slug.startsWith('/') ? page.slug : `/${page.slug}`;
     return `
-      <a class="nav-item" href="#${href}">
+      <a class="nav-item" href="#${escapeHtml(href)}">
         <span class="nav-icon">${escapeHtml(page.icon || '✦')}</span>
         <span class="nav-label">${escapeHtml(page.title)}</span>
       </a>
