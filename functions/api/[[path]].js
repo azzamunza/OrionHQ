@@ -163,7 +163,7 @@ export async function onRequest({ request, env, params }) {
       if (!isAdmin(user, env)) return json({ error: 'Forbidden' }, 403);
       const body = await request.json();
       const title = String(body.title || '').trim().slice(0, 100);
-      const slug = String(body.slug || '').replace(/^\/+/, '');
+      const slug = String(body.slug || '').replace(/^\/+/, '').slice(0, 80);
       const kind = ['dashboard', 'link', 'income'].includes(body.kind) ? body.kind : 'link';
       const icon = String(body.icon || '✦').slice(0, 8) || '✦';
       if (!title || !/^[a-z0-9-]+$/.test(slug)) return json({ error: 'Invalid page' }, 400);
