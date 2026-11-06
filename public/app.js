@@ -254,7 +254,8 @@ function renderGenericPage(title, icon) {
 
 function updateBreadcrumb() {
   const route = (location.hash || '#/').replace('#', '') || '/';
-  const routeTitle = route === '/' ? 'Dashboard' : route === '/income-engine' ? 'Income engine' : route === '/focus-board' ? 'Focus board' : 'Page';
+  const page = state.pages.find((entry) => entry.slug === route);
+  const routeTitle = route === '/' ? 'Dashboard' : route === '/income-engine' ? 'Income engine' : page?.title || (route === '/focus-board' ? 'Focus board' : 'Page');
   $('#breadcrumb-current').textContent = routeTitle;
 }
 
@@ -265,7 +266,7 @@ function renderRoute() {
 
   if (route === '/') return renderDashboard();
   if (route === '/income-engine') return renderIncomeEngine();
-  if (page) return renderGenericPage(page.title, page.icon);
+  if (page) return page.kind === 'income' ? renderIncomeEngine() : renderGenericPage(page.title, page.icon);
   return renderGenericPage('Untitled page', '✦');
 }
 
