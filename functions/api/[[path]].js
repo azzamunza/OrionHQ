@@ -55,9 +55,11 @@ const cookie = (name, value, maxAge) =>
 const getUser = (request, env) => verify(getCookie(request, SESSION_COOKIE), env.SESSION_SECRET);
 
 const isAdmin = (user, env) =>
-  !!user && user.email_verified && user.email === (env.ADMIN_EMAIL || 'azzamunza@gmail.com');
+  !!user && user.email_verified &&
+  String(user.email || '').toLowerCase() === String(env.ADMIN_EMAIL || 'azzamunza@gmail.com').toLowerCase();
 
 function login(request, env) {
+  if (!env.GOOGLE_CLIENT_ID) return json({ error: 'Google sign-in is not configured' }, 503);
   const url = new URL(request.url);
   const state = crypto.randomUUID();
   const params = new URLSearchParams({
@@ -78,6 +80,9 @@ function login(request, env) {
 }
 
 async function callback(request, env) {
+  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.SESSION_SECRET) {
+    return json({ error: 'Google sign-in is not fully configured' }, 503);
+  }
   const url = new URL(request.url);
   const state = url.searchParams.get('state');
   const code = url.searchParams.get('code');
@@ -120,6 +125,16 @@ async function callback(request, env) {
 
 export async function onRequest({ request, env, params }) {
   const route = `${request.method} /${[].concat(params.path || []).join('/')}`;
+  if (route === 'POST /auth/logout') {
+    return json({ ok: true }, 200, { 'set-cookie': cookie(SESSION_COOKIE, '', 0) });
+  }
+  if (route === 'GET /auth/login' && !env.GOOGLE_CLIENT_ID) {
+    return json({ error: 'Google sign-in is not configured' }, 503);
+  }
+  if (route === 'GET /auth/callback' && (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.SESSION_SECRET)) {
+    return json({ error: 'Google sign-in is not fully configured' }, 503);
+  }
+  if (!env.SESSION_SECRET) return json({ error: 'Session signing is not configured' }, 503);
   const user = await getUser(request, env);
 
   try {
@@ -168,9 +183,9 @@ export async function onRequest({ request, env, params }) {
       const body = await request.json();
       await env.DB.prepare(
         `insert into OrionHQ_settings (user_id, sidebar_pinned, theme, updated_at)
-         values (?1, ?2, 'dark', strftime('%Y-%m-%dT%H:%M:%fZ','now'))
-         on conflict(user_id) do update set sidebar_pinned = ?2, updated_at = excluded.updated_at`
-      ).bind(user.sub, body.sidebar_pinned ? 1 : 0).run();
+         values (?1, ?2, ?3, strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+         on conflict(user_id) do update set sidebar_pinned = ?2, theme = ?3, updated_at = excluded.updated_at`
+      ).bind(user.sub, body.sidebar_pinned ? 1 : 0, body.theme === 'light' ? 'light' : 'dark').run();
       return json({ ok: true });
     }
 
