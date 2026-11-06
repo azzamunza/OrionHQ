@@ -2,7 +2,7 @@ async function api(path, options = {}) {
   const res = await fetch(`/api${path}`, {
     credentials: 'same-origin',
     ...options,
-    headers: options.body ? { 'content-type': 'application/json' } : undefined
+    headers: { ...(options.body ? { 'content-type': 'application/json' } : {}), ...(options.headers || {}) }
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || res.statusText);
@@ -11,7 +11,8 @@ async function api(path, options = {}) {
 const state = {
   session: null,
   pages: [],
-  pinned: localStorage.getItem('orionhq_sidebar_pinned') === 'true'
+  pinned: localStorage.getItem('orionhq_sidebar_pinned') === 'true',
+  theme: localStorage.getItem('orionhq_theme') === 'light' ? 'light' : 'dark'
 };
 
 const defaultPages = [
@@ -21,6 +22,12 @@ const defaultPages = [
 ];
 
 const $ = (selector) => document.querySelector(selector);
+const escapeHtml = (value) => String(value ?? '').replace(/[&<>\"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', "'": '&#39;' })[char]);
+
+function applyTheme() {
+  document.body.dataset.theme = state.theme;
+  localStorage.setItem('orionhq_theme', state.theme);
+}
 
 function showView(target) {
   const authView = $('#auth-view');
@@ -46,13 +53,13 @@ function renderNav() {
   const nav = $('#nav-list');
   if (!nav) return;
 
-  const pages = [...defaultPages, ...state.pages].filter(Boolean);
+  const pages = (state.pages.length ? state.pages : defaultPages).filter(Boolean);
   const navItems = pages.map((page) => {
     const href = page.slug.startsWith('/') ? page.slug : `/${page.slug}`;
     return `
-      <a class="nav-item" href="#${href}">
-        <span class="nav-icon">${page.icon || '✦'}</span>
-        <span class="nav-label">${page.title}</span>
+      <a class="nav-item" href="#${escapeHtml(href)}">
+        <span class="nav-icon">${escapeHtml(page.icon || '✦')}</span>
+        <span class="nav-label">${escapeHtml(page.title)}</span>
       </a>
     `;
   }).join('');
@@ -76,8 +83,8 @@ function renderDashboard() {
   $('#page-content').innerHTML = `
     <section class="hero">
       <div>
-        <p class="eyebrow">THURSDAY · 17 SEPTEMBER</p>
-        <h1>Good morning, <span>${state.session?.user?.user_metadata?.full_name || 'Azzam'}</span>.</h1>
+        <p class="eyebrow">${new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase()}</p>
+        <h1>Welcome back, <span>${escapeHtml(state.session?.user?.name || 'there')}</span>.</h1>
       </div>
       <div class="now-label">LOCAL TIME · ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
     </section>
@@ -236,9 +243,9 @@ function renderGenericPage(title, icon) {
   $('#page-content').innerHTML = `
     <section class="empty-state">
       <div>
-        <div class="brand-mark" style="margin-bottom:1rem;">${icon || '✦'}</div>
+        <div class="brand-mark" style="margin-bottom:1rem;">${escapeHtml(icon || '✦')}</div>
         <p class="eyebrow">ORIONHQ PAGE</p>
-        <h1>${title}</h1>
+        <h1>${escapeHtml(title)}</h1>
         <p>This workspace is ready for your next useful idea.</p>
       </div>
     </section>
@@ -247,7 +254,8 @@ function renderGenericPage(title, icon) {
 
 function updateBreadcrumb() {
   const route = (location.hash || '#/').replace('#', '') || '/';
-  const routeTitle = route === '/' ? 'Dashboard' : route === '/income-engine' ? 'Income engine' : route === '/focus-board' ? 'Focus board' : 'Page';
+  const page = state.pages.find((entry) => entry.slug === route);
+  const routeTitle = route === '/' ? 'Dashboard' : route === '/income-engine' ? 'Income engine' : page?.title || (route === '/focus-board' ? 'Focus board' : 'Page');
   $('#breadcrumb-current').textContent = routeTitle;
 }
 
@@ -258,7 +266,7 @@ function renderRoute() {
 
   if (route === '/') return renderDashboard();
   if (route === '/income-engine') return renderIncomeEngine();
-  if (page) return renderGenericPage(page.title, page.icon);
+  if (page) return page.kind === 'income' ? renderIncomeEngine() : renderGenericPage(page.title, page.icon);
   return renderGenericPage('Untitled page', '✦');
 }
 
@@ -287,7 +295,9 @@ async function loadSettings() {
     const { settings } = await api('/settings');
     if (settings) {
       state.pinned = !!settings.sidebar_pinned;
+      state.theme = settings.theme === 'light' ? 'light' : 'dark';
       localStorage.setItem('orionhq_sidebar_pinned', String(state.pinned));
+      applyTheme();
       setSidebarState();
     }
   } catch (err) {
@@ -298,7 +308,7 @@ async function loadSettings() {
 async function saveSettings() {
   if (!state.session) return;
   try {
-    await api('/settings', { method: 'PUT', body: JSON.stringify({ sidebar_pinned: state.pinned }) });
+    await api('/settings', { method: 'PUT', body: JSON.stringify({ sidebar_pinned: state.pinned, theme: state.theme }) });
   } catch (err) {
     console.warn('Could not save OrionHQ settings', err);
   }
@@ -411,12 +421,14 @@ function wireEvents() {
   });
   window.addEventListener('hashchange', renderRoute);
   $('#theme-button').addEventListener('click', () => {
-    document.body.style.filter = 'hue-rotate(10deg)';
-    setTimeout(() => document.body.style.filter = '', 180);
+    state.theme = state.theme === 'dark' ? 'light' : 'dark';
+    applyTheme();
+    saveSettings();
   });
 }
 
 window.addEventListener('DOMContentLoaded', () => {
+  applyTheme();
   setSidebarState();
   wireEvents();
   initApp();

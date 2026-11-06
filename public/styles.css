@@ -106,3 +106,20 @@ button { cursor:pointer; }
 .mobile-only { display:none; }
 @media (max-width:900px) { .sidebar { position:fixed; left:-275px; top:0; bottom:0; z-index:3; width:270px; flex-basis:270px; transition:left .2s ease; } .sidebar.open { left:0; } .mobile-only { display:inline-flex; align-items:center; justify-content:center; } .stat-card { grid-column:span 6; } .wide-card { grid-column:span 12; } }
 @media (max-width:560px) { .stat-card { grid-column:span 12; } .topbar { height:64px; } .breadcrumbs span:first-child,.breadcrumbs span:nth-child(2) { display:none; } .profile-button #profile-name { display:none; } }
+
+
+/* Accessible light theme; dark remains the default. */
+body[data-theme="light"] {
+  --bg: #edf3f8; --bg-2: #e4edf5; --panel: rgba(255,255,255,.82);
+  --panel-strong: rgba(255,255,255,.97); --line: rgba(38,65,91,.16);
+  --ink: #142638; --muted: #52677b; --soft: #71869a;
+  --blue: #176bb0; --mint: #087c60; --amber: #946000; --red: #b32635;
+  --shadow: 0 24px 70px rgba(20,38,56,.12);
+  background: radial-gradient(circle at top left,rgba(23,107,176,.12),transparent 25%), radial-gradient(circle at right center,rgba(8,124,96,.09),transparent 32%), linear-gradient(180deg,#edf3f8 0%,#e7eff6 100%);
+  color: var(--ink);
+}
+body[data-theme="light"] .sidebar { background: rgba(255,255,255,.78); }
+body[data-theme="light"] .card { background: linear-gradient(160deg,rgba(255,255,255,.94),rgba(245,249,252,.94)); }
+body[data-theme="light"] .developer-dialog { background: var(--panel-strong); }
+body[data-theme="light"] .primary-button, body[data-theme="light"] #user-avatar { color: #fff; }
+body[data-theme="light"] #page-form input, body[data-theme="light"] #page-form select { background: #fff; color: var(--ink); }

@@ -8,5 +8,5 @@ ADMIN_EMAIL = "azzamunza@gmail.com"
 [[d1_databases]]
 binding = "DB"
 database_name = "orionhq"
-database_id = "REPLACE_WITH_D1_ID" # from `wrangler d1 create orionhq`
+database_id = "c6530b9b-f717-4307-9428-e6f2fccbc338" # from `wrangler d1 create orionhq`
 migrations_dir = "migrations"

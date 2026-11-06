@@ -43,3 +43,16 @@ Create `.dev.vars` (gitignored) with the three secrets, then:
 wrangler d1 migrations apply orionhq --local
 wrangler pages dev --port 8788
 ```
+
+
+## Environment configuration
+
+Set these as production and preview Pages variables/secrets:
+
+- `ADMIN_EMAIL`: the Google account allowed to access Developer mode (plain-text variable).
+- `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`: Google OAuth web application credentials (secrets).
+- `SESSION_SECRET`: a random secret of at least 32 bytes (secret). Do not commit it.
+
+The production OAuth redirect URI must exactly match `https://orionhq.entangledlab.work/api/auth/callback`. Preview deployments use their own `pages.dev` origin, so add the preview callback URI to Google OAuth while testing preview sign-in.
+
+The `wrangler.toml` D1 binding is the source of truth for local and deployment configuration. Do not replace the database ID with a placeholder before deploying.
