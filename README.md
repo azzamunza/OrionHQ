@@ -1,30 +1,45 @@
 # OrionHQ
 
-A personal browser home portal for a Supabase-powered dashboard.
+A personal browser home portal, hosted on Cloudflare Pages (`orionhq.entangledlab.work`) with a Cloudflare D1 database.
 
-## Included
+## Stack
 
-- Google OAuth login with Supabase
-- Responsive desktop and mobile layout
-- Collapsible and pinnable sidebar navigation
-- Dashboard cards and income-engine workspace
-- Admin-only custom page creation
-- Prefixed `OrionHQ_` Supabase tables and RLS policies
+- Static frontend in `public/`
+- API in `functions/api/[[path]].js` (Pages Functions): Google OAuth + signed session cookie
+- D1 database (`migrations/0001_init.sql`), tables prefixed `OrionHQ_`
+- Admin (developer mode) restricted to `ADMIN_EMAIL` (`azzamunza@gmail.com`), enforced server-side
 
-## Setup
-
-1. Configure the public Supabase anon key in `app.js`.
-2. Add these OAuth redirect URLs in Supabase Authentication:
-   - `http://localhost:3000/`
-   - `https://azzamunza.github.io/OrionHQ/`
-   - Any custom production domain used for OrionHQ
-3. Run `supabase-schema.sql` in Supabase SQL Editor.
-4. Developer mode is restricted to the exact admin email `azzamunza@gmail.com`.
-
-Use only the public anon key in frontend code. Never expose a Supabase service-role key. Keep Row Level Security enabled for every OrionHQ table; admin permissions are enforced by database policies as well as the client UI.
-
-## Local preview
+## Deploy
 
 ```bash
-npx serve .
+npm i -g wrangler && wrangler login
+wrangler d1 create orionhq                 # put database_id in wrangler.toml
+wrangler d1 migrations apply orionhq --remote
+wrangler pages project create orionhq --production-branch main
+wrangler pages deploy public --project-name orionhq
+wrangler pages secret put GOOGLE_CLIENT_ID --project-name orionhq
+wrangler pages secret put GOOGLE_CLIENT_SECRET --project-name orionhq
+wrangler pages secret put SESSION_SECRET --project-name orionhq   # e.g. `openssl rand -hex 32`
+wrangler pages deploy public --project-name orionhq
+```
+
+Then in the Cloudflare dashboard: Pages → orionhq → Custom domains → add `orionhq.entangledlab.work`
+(the domain must be on your Cloudflare account; the DNS record is created automatically).
+
+In Google Cloud Console, add the authorized redirect URI:
+`https://orionhq.entangledlab.work/api/auth/callback`
+(and `http://localhost:8788/api/auth/callback` for local dev).
+
+## Migrating existing Supabase data
+
+Export rows from Supabase and insert into D1 with `wrangler d1 execute orionhq --remote --file data.sql`.
+`OrionHQ_settings.user_id` is now the Google account `sub`, not a Supabase UUID.
+
+## Local dev
+
+Create `.dev.vars` (gitignored) with the three secrets, then:
+
+```bash
+wrangler d1 migrations apply orionhq --local
+wrangler pages dev --port 8788
 ```
