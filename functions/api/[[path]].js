@@ -42,7 +42,11 @@ async function verify(token, secret) {
 
 function getCookie(request, name) {
   const match = (request.headers.get('cookie') || '').split(/;\s*/).find((c) => c.startsWith(`${name}=`));
-  return match ? decodeURIComponent(match.slice(name.length + 1)) : null;
+  try {
+    return match ? decodeURIComponent(match.slice(name.length + 1)) : null;
+  } catch {
+    return null;
+  }
 }
 
 const cookie = (name, value, maxAge) =>
